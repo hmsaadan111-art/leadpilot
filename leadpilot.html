@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LeadPilot AI Lead Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Cockpit at night: deep navy instrument panel, amber brand signal, cyan for live data. Left-aligned, asymmetric hero with a 3D lead-routing scene. */
+  --ink:#0A1120;
+  --panel:#111B2F;
+  --panel-2:#16223A;
+  --line:#22304B;
+  --text:#E9EEF7;
+  --muted:#93A0BA;
+  --amber:#FF9F43;
+  --cyan:#62D6FF;
+  --hot:#FF6B5A;
+  --warm:#F4D35E;
+  --cold:#7D8DB8;
+  --good:#3DDC97;
+  --display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body:"Geist", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono:"Geist Mono", ui-monospace, "Cascadia Code", Consolas, monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--ink);color:var(--text);font-family:var(--body);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:inherit}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;letter-spacing:-0.02em}
+p{margin:0}
+:focus-visible{outline:2px solid var(--cyan);outline-offset:3px;border-radius:6px}
+.wrap{width:min(1200px,100% - 40px);margin-inline:auto}
+.num{font-variant-numeric:tabular-nums}
+
+/* Nav */
+.nav{position:sticky;top:0;z-index:30;background:rgba(10,17,32,.72);backdrop-filter:blur(14px);border-bottom:1px solid rgba(34,48,75,.6)}
+.nav .wrap{display:flex;align-items:center;gap:28px;height:64px}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:700;font-size:20px;text-decoration:none}
+.brand svg{width:28px;height:28px}
+.nav nav{display:flex;gap:22px;margin-left:auto}
+.nav nav a{text-decoration:none;color:var(--muted);font-size:14.5px}
+.nav nav a:hover{color:var(--text)}
+.btn{display:inline-flex;align-items:center;gap:8px;border:0;cursor:pointer;font:600 15px/1 var(--body);padding:13px 20px;border-radius:12px;text-decoration:none;transition:transform .15s ease, box-shadow .2s ease, background .2s}
+.btn-primary{background:var(--amber);color:#1B1206;box-shadow:0 8px 24px -8px rgba(255,159,67,.7)}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 12px 30px -8px rgba(255,159,67,.85)}
+.btn-ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
+.btn-ghost:hover{border-color:var(--muted)}
+.btn-sm{padding:10px 14px;font-size:14px;border-radius:10px}
+.btn[disabled]{opacity:.55;cursor:not-allowed;transform:none}
+
+/* Hero */
+.hero{position:relative;padding:56px 0 40px}
+.hero .wrap{display:grid;grid-template-columns:1fr 1.08fr;gap:24px;align-items:center}
+.hero h1{font-size:clamp(40px,5.6vw,72px);line-height:1.02;font-weight:750;font-variation-settings:"opsz" 96}
+.hero h1 .line2{display:block}
+.lede{margin-top:20px;font-size:18.5px;color:#C4CDDD;max-width:34em}
+.cta-row{display:flex;flex-wrap:wrap;gap:12px;margin-top:30px}
+.proof{display:grid;grid-template-columns:repeat(3,minmax(0,max-content));gap:32px;margin-top:38px}
+@media (max-width:440px){.proof{grid-template-columns:1fr 1fr;gap:20px}}
+.proof div{display:flex;flex-direction:column}
+.proof b{font-family:var(--display);font-size:28px;font-weight:700}
+.proof span{color:var(--muted);font-size:13.5px}
+.scene{position:relative;height:520px;border-radius:28px;overflow:hidden;background:radial-gradient(120% 90% at 60% 45%,#16264A 0%,#0C1528 55%,var(--ink) 100%);border:1px solid var(--line)}
+#three{position:absolute;inset:0;width:100%;height:100%;display:block}
+.scene .label{position:absolute;transform:translate(-50%,-50%);pointer-events:none;font:500 12.5px/1 var(--mono);color:var(--text);padding:7px 10px;border-radius:999px;background:rgba(17,27,47,.85);border:1px solid var(--line);white-space:nowrap}
+.scene .label i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:7px;vertical-align:1px}
+.hud{position:absolute;left:18px;top:18px;display:flex;flex-direction:column;gap:2px;padding:12px 14px;border-radius:14px;background:rgba(10,17,32,.7);border:1px solid var(--line);backdrop-filter:blur(8px)}
+.hud small{color:var(--muted);font-size:12px}
+.hud b{font-family:var(--display);font-size:26px;font-weight:700}
+.hud .live{display:flex;align-items:center;gap:7px;color:var(--good);font-size:12px}
+.hud .live::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--good);box-shadow:0 0 0 0 rgba(61,220,151,.6);animation:ping 1.6s infinite}
+@keyframes ping{0%{box-shadow:0 0 0 0 rgba(61,220,151,.6)}100%{box-shadow:0 0 0 10px rgba(61,220,151,0)}}
+.feed{position:absolute;left:16px;bottom:16px;max-width:min(62%,380px);display:flex;flex-direction:column;gap:6px;align-items:flex-start;pointer-events:none}
+.feed .ev{font:500 12.5px/1.2 var(--mono);padding:8px 11px;border-radius:10px;background:rgba(17,27,47,.88);border:1px solid var(--line);animation:feedIn .45s ease both;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@keyframes feedIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.no-gl{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-size:14px}
+
+/* Sections */
+section{padding:72px 0}
+.sec-head{display:flex;flex-direction:column;gap:12px;max-width:44em;margin-bottom:34px}
+.sec-head h2{font-size:clamp(30px,3.6vw,44px);font-weight:700;line-height:1.08}
+.sec-head p{color:var(--muted);font-size:17px}
+
+/* Demo */
+.demo{display:grid;grid-template-columns:.92fr 1.08fr;gap:22px;align-items:start}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:24px}
+.card h3{font-size:20px;font-weight:650;margin-bottom:4px}
+.card .sub{color:var(--muted);font-size:14px;margin-bottom:18px}
+.samples{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+.chip{border:1px solid var(--line);background:var(--panel-2);color:var(--text);font:500 13px/1 var(--body);padding:9px 12px;border-radius:999px;cursor:pointer}
+.chip:hover,.chip[aria-pressed="true"]{border-color:var(--amber);color:#FFD7AE}
+form .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.field label{font-size:13px;color:var(--muted)}
+.field input,.field select,.field textarea{width:100%;background:#0D1628;border:1px solid var(--line);color:var(--text);border-radius:12px;padding:12px 13px;font:15px/1.4 var(--body);transition:border-color .2s}
+.field textarea{min-height:108px;resize:vertical}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--cyan);box-shadow:0 0 0 3px rgba(98,214,255,.15)}
+.form-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.form-foot small{color:var(--muted);font-size:12.5px}
+.err{color:var(--hot);font-size:13px;min-height:18px;margin-top:4px}
+
+.run{display:flex;flex-direction:column;gap:18px}
+.run-top{display:grid;grid-template-columns:auto 1fr;gap:22px;align-items:center}
+.gauge{position:relative;width:148px;height:148px}
+.gauge svg{width:100%;height:100%;transform:rotate(-90deg)}
+.gauge .val{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.gauge .val b{font-family:var(--display);font-size:40px;font-weight:750;line-height:1}
+.gauge .val span{font-size:12px;color:var(--muted);margin-top:4px}
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px}
+.steps li{display:grid;grid-template-columns:24px 1fr auto;gap:10px;align-items:center;font-size:14.5px;color:var(--muted)}
+.steps li .dot{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--line);display:grid;place-items:center;font:600 11px var(--mono);color:var(--muted)}
+.steps li.active{color:var(--text)}
+.steps li.active .dot{border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 0 4px rgba(98,214,255,.12);animation:spin 1s linear infinite;border-top-color:transparent}
+.steps li.done{color:var(--text)}
+.steps li.done .dot{border-color:var(--good);background:var(--good);color:#06291A}
+.steps li small{font:12px var(--mono);color:var(--muted)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.log{background:#08101E;border:1px solid var(--line);border-radius:14px;padding:14px 16px;height:168px;overflow:auto;font:12.5px/1.65 var(--mono);color:#B9C6DD}
+.log .t{color:#5C6B88;margin-right:8px}
+.log .k{color:var(--cyan)}
+.log .a{color:var(--amber)}
+.log .g{color:var(--good)}
+.decision{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.tier{display:inline-flex;align-items:center;gap:8px;font:600 13px/1 var(--body);padding:8px 12px;border-radius:999px;border:1px solid}
+.tier.hot{color:var(--hot);border-color:rgba(255,107,90,.45);background:rgba(255,107,90,.08)}
+.tier.warm{color:var(--warm);border-color:rgba(244,211,94,.4);background:rgba(244,211,94,.07)}
+.tier.cold{color:#AEBBDA;border-color:rgba(125,141,184,.45);background:rgba(125,141,184,.08)}
+.tier i{width:8px;height:8px;border-radius:50%;background:currentColor}
+.action{font-size:13.5px;color:var(--muted)}
+.mail{background:#F6F8FC;color:#1A2334;border-radius:16px;padding:18px 20px;box-shadow:0 20px 40px -24px rgba(0,0,0,.8)}
+.mail-h{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;border-bottom:1px solid #DDE3EE;padding-bottom:10px;margin-bottom:12px}
+.mail-h div{font-size:13px;color:#56637A;display:flex;flex-direction:column;gap:2px}
+.mail-h strong{color:#1A2334;font-size:14.5px}
+.mail-body{font-size:14.5px;line-height:1.6;white-space:pre-wrap;min-height:120px}
+.mail-body .caret{display:inline-block;width:2px;height:1.05em;background:#1A2334;vertical-align:-2px;animation:blink .9s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.copy{background:#1A2334;color:#fff;border:0;border-radius:9px;padding:8px 12px;font:600 12.5px var(--body);cursor:pointer;white-space:nowrap}
+.copy[disabled]{opacity:.4;cursor:default}
+.empty-run{color:var(--muted);font-size:14px}
+
+/* CRM */
+.crm{margin-top:22px}
+.crm-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:14px}
+.crm-head h3{font-size:20px}
+.filters{display:flex;gap:6px}
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:16px}
+table{width:100%;border-collapse:collapse;min-width:820px;font-size:14px}
+th{text-align:left;font-weight:500;color:var(--muted);font-size:12.5px;padding:12px 16px;background:var(--panel-2);border-bottom:1px solid var(--line)}
+td{padding:13px 16px;border-bottom:1px solid rgba(34,48,75,.6);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+tbody tr{transition:background .3s}
+tbody tr:hover{background:rgba(22,34,58,.6)}
+tr.fresh{animation:fresh 2.4s ease}
+@keyframes fresh{0%{background:rgba(255,159,67,.22)}100%{background:transparent}}
+.who{display:flex;align-items:center;gap:10px}
+.av{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;font:600 13px var(--body);color:#0A1120;flex:none}
+.who small{display:block;color:var(--muted);font-size:12.5px}
+.bar{display:flex;align-items:center;gap:10px}
+.bar span{display:block;height:6px;border-radius:6px;background:var(--line);width:90px;overflow:hidden}
+.bar span i{display:block;height:100%;border-radius:6px}
+
+/* Workflow */
+.flow{background:var(--panel);border:1px solid var(--line);border-radius:24px;padding:20px;overflow-x:auto}
+.flow svg{display:block;min-width:900px;width:100%;height:auto}
+.flow .edge{fill:none;stroke:#2B3A59;stroke-width:2}
+.flow .pulse{fill:none;stroke-width:2.5;stroke-dasharray:6 14;animation:dash 1.6s linear infinite}
+@keyframes dash{to{stroke-dashoffset:-40}}
+.flow text{font-family:var(--body);fill:var(--text)}
+.flow .sm{fill:var(--muted);font-size:12px}
+.steps-explain{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:22px}
+.steps-explain div{padding:18px;border-left:2px solid var(--line)}
+.steps-explain b{font-family:var(--display);color:var(--amber);font-size:30px;font-weight:700;line-height:1}
+.steps-explain h3{font-size:18px;margin:6px 0}
+.steps-explain p{color:var(--muted);font-size:14.5px}
+
+/* Savings calculator */
+.calc{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:stretch}
+.calc-in{display:flex;flex-direction:column;gap:26px}
+.slider{display:flex;flex-direction:column;gap:10px}
+.s-top{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.s-top label{font-size:15px;color:var(--text)}
+.s-top output{font-family:var(--display);font-size:22px;font-weight:700;color:var(--amber)}
+.slider small{color:var(--muted);font-size:13px}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:6px;background:linear-gradient(90deg,var(--amber) var(--p,20%),var(--line) var(--p,20%));outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:#FFF5EA;border:4px solid var(--amber);box-shadow:0 4px 12px rgba(0,0,0,.4);transition:transform .15s}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.12)}
+input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#FFF5EA;border:4px solid var(--amber)}
+input[type=range]:focus-visible{box-shadow:0 0 0 4px rgba(98,214,255,.25)}
+.assume{color:var(--muted);font-size:13.5px;border-top:1px solid var(--line);padding-top:16px;margin-top:auto}
+.calc-out{display:flex;flex-direction:column;gap:26px;background:linear-gradient(160deg,#1A2745 0%,var(--panel) 60%)}
+.big{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.big b{font-family:var(--display);font-size:clamp(64px,8vw,96px);font-weight:750;line-height:.9;letter-spacing:-.04em}
+.big span{font-size:18px;color:#C4CDDD}
+.bars{display:flex;flex-direction:column;gap:12px}
+.b-row{display:grid;grid-template-columns:110px 1fr 54px;gap:12px;align-items:center;font-size:14px;color:var(--muted)}
+.b-track{height:12px;border-radius:8px;background:#0D1628;overflow:hidden}
+.b-track i{display:block;height:100%;border-radius:8px;background:var(--cold);transition:width .5s cubic-bezier(.2,.8,.2,1)}
+.b-track i.lp{background:var(--amber)}
+.b-row em{font-style:normal;color:var(--text);text-align:right}
+.mini{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.mini div{background:rgba(10,17,32,.5);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+.mini b{font-family:var(--display);font-size:26px;font-weight:700;display:block}
+.mini span{color:var(--muted);font-size:13.5px}
+.calc-out .btn{align-self:flex-start;margin-top:auto}
+.integr{display:flex;flex-wrap:wrap;gap:10px;margin-top:30px}
+.integr span{border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-size:14px;color:#C4CDDD;background:var(--panel)}
+
+footer{border-top:1px solid var(--line);padding:34px 0 48px;color:var(--muted);font-size:14px}
+footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+footer a{color:var(--text)}
+
+.toast{position:fixed;right:20px;bottom:20px;z-index:50;display:flex;gap:12px;align-items:flex-start;max-width:360px;background:var(--panel-2);border:1px solid var(--line);border-left:3px solid var(--good);border-radius:14px;padding:14px 16px;box-shadow:0 24px 50px -20px rgba(0,0,0,.8);transform:translateY(140%);transition:transform .45s cubic-bezier(.2,.9,.3,1.2)}
+.toast.show{transform:none}
+.toast b{display:block;font-size:14px}
+.toast span{color:var(--muted);font-size:13px}
+
+@media (max-width:980px){
+  .hero .wrap,.demo,.calc{grid-template-columns:1fr}
+  .scene{height:420px}
+  .steps-explain{grid-template-columns:1fr 1fr}
+  .nav nav{display:none}
+  .nav .btn{margin-left:auto}
+}
+@media (max-width:560px){
+  .wrap{width:calc(100% - 32px)}
+  .hero{padding-top:34px}
+  .scene{height:360px;border-radius:20px}
+  form .row{grid-template-columns:1fr}
+  .run-top{grid-template-columns:1fr;justify-items:center}
+  .steps{width:100%}
+  .steps-explain{grid-template-columns:1fr}
+  .card{padding:18px}
+  section{padding:54px 0}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="LeadPilot home">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF9F43"/><stop offset="1" stop-color="#62D6FF"/></linearGradient></defs><rect x="1" y="1" width="30" height="30" rx="9" fill="#111B2F" stroke="#22304B"/><path d="M8 22 L16 8 L24 22 L16 18 Z" fill="url(#lg)"/></svg>
+      LeadPilot
+    </a>
+    <nav aria-label="Main">
+      <a href="#try">Try it</a>
+      <a href="#workflow">How it works</a>
+      <a href="#savings">Savings</a>
+    </nav>
+    <a class="btn btn-primary btn-sm" href="#try">Try it now</a>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero" aria-labelledby="h1">
+    <div class="wrap">
+      <div>
+        <h1 id="h1">Every new lead answered <span class="line2">in under a minute.</span></h1>
+        <p class="lede">LeadPilot is an AI agent that reads each inquiry, scores how likely it is to buy, updates your CRM and sends a personal reply. Your team only talks to the leads worth their time.</p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="#try">Try it now</a>
+          <a class="btn btn-ghost" href="#workflow">See the workflow</a>
+        </div>
+        <div class="proof">
+          <div><b class="num">24/7</b><span>replies, day and night</span></div>
+          <div><b class="num">5 steps</b><span>fully automatic</span></div>
+          <div><b class="num">9 tools</b><span>connected</span></div>
+        </div>
+      </div>
+      <div class="scene" id="scene" aria-label="3D view of leads flowing into the AI agent and out to CRM, email and WhatsApp">
+        <canvas id="three"></canvas>
+        <div class="hud" aria-live="off">
+          <span class="live">Routing live</span>
+          <b class="num" id="hudCount">0</b>
+          <small>leads routed while you watched</small>
+        </div>
+        <div id="labels"></div>
+        <div class="feed" id="feed" aria-hidden="true"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="try" aria-labelledby="demo-h">
+    <div class="wrap">
+      <div class="sec-head">
+        <h2 id="demo-h">Try it with an inquiry</h2>
+        <p>Use one of the inquiries below or type your own. LeadPilot scores it, decides what happens next and writes the reply while you watch.</p>
+      </div>
+
+      <div class="demo">
+        <div class="card">
+          <h3>New inquiry</h3>
+          <p class="sub">The same fields your website form collects.</p>
+          <div class="samples" role="group" aria-label="Sample leads">
+            <button type="button" class="chip" data-sample="0" aria-pressed="true">Dental clinic, urgent</button>
+            <button type="button" class="chip" data-sample="1" aria-pressed="false">SaaS founder</button>
+            <button type="button" class="chip" data-sample="3" aria-pressed="false">Boutique, exploring</button>
+            <button type="button" class="chip" data-sample="2" aria-pressed="false">Student question</button>
+          </div>
+          <form id="leadForm" novalidate>
+            <div class="row">
+              <div class="field"><label for="f-name">Full name</label><input id="f-name" autocomplete="off"></div>
+              <div class="field"><label for="f-company">Company</label><input id="f-company" autocomplete="off"></div>
+            </div>
+            <div class="row">
+              <div class="field"><label for="f-email">Work email</label><input id="f-email" type="email" autocomplete="off"></div>
+              <div class="field"><label for="f-budget">Budget</label>
+                <select id="f-budget">
+                  <option value="500">Under $1,000</option>
+                  <option value="3000">$1,000 to $5,000</option>
+                  <option value="12000">$5,000 to $20,000</option>
+                  <option value="30000">Over $20,000</option>
+                </select>
+              </div>
+            </div>
+            <div class="field"><label for="f-msg">Message</label><textarea id="f-msg"></textarea></div>
+            <div class="err" id="err" role="alert"></div>
+            <div class="form-foot">
+              <small>Preview mode: nothing is sent from this page.</small>
+              <button class="btn btn-primary" id="runBtn" type="submit">Run the agent</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card run" aria-live="polite">
+          <div class="run-top">
+            <div class="gauge">
+              <svg viewBox="0 0 120 120" aria-hidden="true">
+                <circle cx="60" cy="60" r="50" fill="none" stroke="#22304B" stroke-width="10"/>
+                <circle id="gArc" cx="60" cy="60" r="50" fill="none" stroke="#62D6FF" stroke-width="10" stroke-linecap="round" stroke-dasharray="314.16" stroke-dashoffset="314.16" style="transition:stroke-dashoffset 1.1s cubic-bezier(.2,.8,.2,1),stroke .4s"/>
+              </svg>
+              <div class="val"><b class="num" id="gVal">0</b><span>lead score</span></div>
+            </div>
+            <ol class="steps" id="steps">
+              <li data-s="0"><span class="dot">1</span><span>Inquiry received</span><small></small></li>
+              <li data-s="1"><span class="dot">2</span><span>Company looked up</span><small></small></li>
+              <li data-s="2"><span class="dot">3</span><span>Intent and budget scored</span><small></small></li>
+              <li data-s="3"><span class="dot">4</span><span>Next step chosen</span><small></small></li>
+              <li data-s="4"><span class="dot">5</span><span>Reply written and CRM updated</span><small></small></li>
+            </ol>
+          </div>
+          <div class="log" id="log"><span class="empty-run">Each step LeadPilot takes is logged here.</span></div>
+          <div class="decision" id="decision"></div>
+          <div class="mail" id="mail">
+            <div class="mail-h">
+              <div><strong id="mSubj">Reply draft</strong><span id="mTo">To: waiting for a lead</span></div>
+              <button class="copy" id="copyBtn" type="button" disabled>Copy email</button>
+            </div>
+            <div class="mail-body" id="mBody">The reply LeadPilot writes for this lead will appear here.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="crm">
+        <div class="crm-head">
+          <div><h3>CRM pipeline</h3><p class="sub" style="margin:4px 0 0;color:var(--muted);font-size:14px">Every lead the agent handled today, newest first.</p></div>
+          <div class="filters" role="group" aria-label="Filter by tier">
+            <button class="chip" data-f="all" aria-pressed="true">All</button>
+            <button class="chip" data-f="hot" aria-pressed="false">Hot</button>
+            <button class="chip" data-f="warm" aria-pressed="false">Warm</button>
+            <button class="chip" data-f="cold" aria-pressed="false">Cold</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Lead</th><th>Source</th><th>Score</th><th>Tier</th><th>Action taken</th><th>Handled</th></tr></thead>
+            <tbody id="crmBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="workflow" aria-labelledby="wf-h">
+    <div class="wrap">
+      <div class="sec-head">
+        <h2 id="wf-h">One workflow, from first message to booked call</h2>
+        <p>The agent connects the tools you already use. Each lead takes the path that fits it.</p>
+      </div>
+      <div class="flow">
+        <svg viewBox="0 0 1000 340" role="img" aria-label="Workflow: website form, email and ads feed the AI agent, which routes hot leads to WhatsApp and a booking link, warm leads to a nurture email sequence, and cold leads to the newsletter. All leads are saved to the CRM.">
+          <defs>
+            <linearGradient id="core" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF9F43"/><stop offset="1" stop-color="#62D6FF"/></linearGradient>
+          </defs>
+          <path class="edge" d="M190 70 C 300 70, 320 170, 420 170"/>
+          <path class="edge" d="M190 170 L 420 170"/>
+          <path class="edge" d="M190 270 C 300 270, 320 170, 420 170"/>
+          <path class="pulse" stroke="#62D6FF" d="M190 70 C 300 70, 320 170, 420 170"/>
+          <path class="pulse" stroke="#62D6FF" d="M190 170 L 420 170" style="animation-delay:-.5s"/>
+          <path class="pulse" stroke="#62D6FF" d="M190 270 C 300 270, 320 170, 420 170" style="animation-delay:-1s"/>
+          <path class="edge" d="M580 170 C 680 170, 690 60, 790 60"/>
+          <path class="edge" d="M580 170 L 790 170"/>
+          <path class="edge" d="M580 170 C 680 170, 690 280, 790 280"/>
+          <path class="pulse" stroke="#FF6B5A" d="M580 170 C 680 170, 690 60, 790 60"/>
+          <path class="pulse" stroke="#F4D35E" d="M580 170 L 790 170" style="animation-delay:-.6s"/>
+          <path class="pulse" stroke="#7D8DB8" d="M580 170 C 680 170, 690 280, 790 280" style="animation-delay:-1.1s"/>
+
+          <g><rect x="30" y="44" width="160" height="52" rx="14" fill="#16223A" stroke="#22304B"/><text x="50" y="76" font-size="15">Website form</text></g>
+          <g><rect x="30" y="144" width="160" height="52" rx="14" fill="#16223A" stroke="#22304B"/><text x="50" y="176" font-size="15">Email inbox</text></g>
+          <g><rect x="30" y="244" width="160" height="52" rx="14" fill="#16223A" stroke="#22304B"/><text x="50" y="276" font-size="15">Facebook lead ads</text></g>
+
+          <g><rect x="420" y="112" width="160" height="116" rx="22" fill="#0D1628" stroke="url(#core)" stroke-width="2"/>
+            <text x="500" y="158" font-size="17" font-weight="600" text-anchor="middle">AI agent</text>
+            <text x="500" y="182" class="sm" text-anchor="middle">reads, scores,</text>
+            <text x="500" y="200" class="sm" text-anchor="middle">decides, writes</text></g>
+
+          <g><rect x="790" y="30" width="180" height="60" rx="14" fill="#16223A" stroke="rgba(255,107,90,.5)"/><text x="808" y="56" font-size="15">Hot: WhatsApp alert</text><text x="808" y="76" class="sm">plus booking link</text></g>
+          <g><rect x="790" y="140" width="180" height="60" rx="14" fill="#16223A" stroke="rgba(244,211,94,.45)"/><text x="808" y="166" font-size="15">Warm: nurture emails</text><text x="808" y="186" class="sm">3 emails over 10 days</text></g>
+          <g><rect x="790" y="250" width="180" height="60" rx="14" fill="#16223A" stroke="rgba(125,141,184,.5)"/><text x="808" y="276" font-size="15">Cold: newsletter</text><text x="808" y="296" class="sm">monthly tips</text></g>
+          <text x="500" y="318" class="sm" text-anchor="middle">Every lead is saved to the CRM with its score and history</text>
+        </svg>
+      </div>
+      <div class="steps-explain">
+        <div><b class="num">1</b><h3>Capture</h3><p>Leads arrive from your form, inbox and ads into one queue, within seconds.</p></div>
+        <div><b class="num">2</b><h3>Understand</h3><p>The agent reads the message, looks up the company and checks the budget.</p></div>
+        <div><b class="num">3</b><h3>Score</h3><p>It rates buying intent from 0 to 100 and sorts the lead as hot, warm or cold.</p></div>
+        <div><b class="num">4</b><h3>Act</h3><p>It replies in your tone, books calls for hot leads and alerts you on WhatsApp.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="savings" aria-labelledby="sav-h">
+    <div class="wrap">
+      <div class="sec-head">
+        <h2 id="sav-h">How many hours would you get back?</h2>
+        <p>Move the sliders to match your business. The estimate updates as you go.</p>
+      </div>
+      <div class="calc">
+        <div class="card calc-in">
+          <div class="slider">
+            <div class="s-top"><label for="c-leads">New leads per week</label><output id="o-leads" class="num" for="c-leads">60</output></div>
+            <input type="range" id="c-leads" min="5" max="500" step="5" value="60">
+          </div>
+          <div class="slider">
+            <div class="s-top"><label for="c-mins">Minutes your team spends per lead</label><output id="o-mins" class="num" for="c-mins">20 min</output></div>
+            <input type="range" id="c-mins" min="5" max="60" step="1" value="20">
+            <small>Reading, researching, replying and updating the CRM.</small>
+          </div>
+          <div class="slider">
+            <div class="s-top"><label for="c-rate">Hourly cost of that time</label><output id="o-rate" class="num" for="c-rate">$25</output></div>
+            <input type="range" id="c-rate" min="5" max="150" step="5" value="25">
+          </div>
+          <p class="assume">Estimate assumes LeadPilot handles about 80% of first-touch work: the reply, scoring and CRM entry. Your team still takes the calls.</p>
+        </div>
+        <div class="card calc-out" aria-live="polite">
+          <div class="big">
+            <b class="num" id="r-hours">16</b>
+            <span>hours back every week</span>
+          </div>
+          <div class="bars" aria-hidden="true">
+            <div class="b-row"><span>Today</span><div class="b-track"><i id="bar-now"></i></div><em class="num" id="v-now">20 h</em></div>
+            <div class="b-row"><span>With LeadPilot</span><div class="b-track"><i id="bar-lp" class="lp"></i></div><em class="num" id="v-lp">4 h</em></div>
+          </div>
+          <div class="mini">
+            <div><b class="num" id="r-month">$1,733</b><span>saved per month</span></div>
+            <div><b class="num" id="r-days">17</b><span>working days a year</span></div>
+          </div>
+          <a class="btn btn-primary" href="#try">Try it with your own inquiry</a>
+        </div>
+      </div>
+      <div class="integr" aria-label="Works with">
+        <span>HubSpot</span><span>Google Sheets</span><span>Gmail</span><span>WhatsApp Business</span><span>Slack</span><span>Calendly</span><span>Facebook Lead Ads</span><span>n8n</span><span>OpenAI</span>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Designed and built by <a href="https://www.linkedin.com/in/hafizsaadan">Hafiz Muhammad Saadan</a></span>
+    <span>&copy; 2026 LeadPilot</span>
+  </div>
+</footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite"><div><b id="toastT"></b><span id="toastS"></span></div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+"use strict";
+const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+
+/* ---------------- 3D scene ---------------- */
+const DEST = [
+  {name:"CRM", color:0x62D6FF, css:"#62D6FF", pos:[3.3, 1.55, 0.2]},
+  {name:"Email", color:0xF4D35E, css:"#F4D35E", pos:[3.6, -0.15, -0.4]},
+  {name:"WhatsApp", color:0x3DDC97, css:"#3DDC97", pos:[3.2, -1.75, 0.3]}
+];
+const FIRST = ["Ayesha","Daniel","Omar","Sofia","Bilal","Emma","Hamza","Lucas","Zara","Noah","Fatima","Liam","Hira","Mateo","Sara","Ali"];
+const CO = ["Smile Dental","Northwind","BrightPath","Kinetic Labs","Urban Nest","Peak Fitness","Lumen Studio","Atlas Realty","GreenLeaf","Vertex Co"];
+let hudN = 0;
+const hud = $("#hudCount"), feed = $("#feed");
+function pushFeed(html){
+  const d=document.createElement("div");d.className="ev";d.innerHTML=html;feed.appendChild(d);
+  while(feed.children.length>3) feed.removeChild(feed.firstChild);
+}
+
+function initThree(){
+  const canvas = $("#three"), scene3 = $("#scene");
+  let renderer;
+  try{ renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true}); }
+  catch(e){ scene3.insertAdjacentHTML("beforeend",'<div class="no-gl">3D view needs WebGL. You can still try LeadPilot below.</div>'); return; }
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 2));
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
+  camera.position.set(0, 0.4, 10.5);
+
+  // glow texture
+  const gc=document.createElement("canvas");gc.width=gc.height=128;const gx=gc.getContext("2d");
+  const rg=gx.createRadialGradient(64,64,0,64,64,64);rg.addColorStop(0,"rgba(255,255,255,1)");rg.addColorStop(.25,"rgba(255,255,255,.55)");rg.addColorStop(1,"rgba(255,255,255,0)");
+  gx.fillStyle=rg;gx.fillRect(0,0,128,128);
+  const glowTex = new THREE.CanvasTexture(gc);
+  const sprite = (color,size,op=1)=>{const m=new THREE.SpriteMaterial({map:glowTex,color,transparent:true,opacity:op,blending:THREE.AdditiveBlending,depthWrite:false});const s=new THREE.Sprite(m);s.scale.set(size,size,1);return s;};
+
+  const world = new THREE.Group(); scene.add(world);
+
+  // stars
+  const sg=new THREE.BufferGeometry(), sp=[];
+  for(let i=0;i<500;i++){const r=14+Math.random()*10,t=Math.random()*Math.PI*2,p=Math.acos(2*Math.random()-1);sp.push(r*Math.sin(p)*Math.cos(t),r*Math.sin(p)*Math.sin(t),-Math.abs(r*Math.cos(p)));}
+  sg.setAttribute("position",new THREE.Float32BufferAttribute(sp,3));
+  scene.add(new THREE.Points(sg,new THREE.PointsMaterial({color:0x8FA6D6,size:0.05,transparent:true,opacity:.7})));
+
+  // core
+  const core = new THREE.Group(); core.position.set(-0.3,0,0); world.add(core);
+  const shell = new THREE.Mesh(new THREE.IcosahedronGeometry(1.25,1), new THREE.MeshBasicMaterial({color:0x62D6FF,wireframe:true,transparent:true,opacity:.55}));
+  scene.add(new THREE.AmbientLight(0x6a7fae,.45));
+  const key=new THREE.DirectionalLight(0xffe6cc,.75); key.position.set(-3,4,6); scene.add(key);
+  const rim=new THREE.PointLight(0x62D6FF,.9,14); rim.position.set(3,-2,3); scene.add(rim);
+  const inner = new THREE.Mesh(new THREE.IcosahedronGeometry(0.82,1), new THREE.MeshPhongMaterial({color:0xFF8A2A,emissive:0x5a1c00,specular:0x664422,shininess:35,flatShading:true}));
+  const innerWire = new THREE.Mesh(new THREE.IcosahedronGeometry(0.84,1), new THREE.MeshBasicMaterial({color:0xFFE2BF,wireframe:true,transparent:true,opacity:.35}));
+  core.add(shell, inner, innerWire);
+  const coreGlow = sprite(0xFF9F43, 5.2, .55); core.add(coreGlow);
+  const coreGlow2 = sprite(0x62D6FF, 7.5, .22); core.add(coreGlow2);
+  const rings=[];
+  [[1.9,0.4,0x62D6FF],[2.3,-0.6,0xFF9F43],[2.7,1.1,0x7D8DB8]].forEach(([r,tilt,c],i)=>{
+    const ring=new THREE.Mesh(new THREE.TorusGeometry(r,0.008,8,160),new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:.5}));
+    ring.rotation.x=Math.PI/2+tilt; ring.rotation.y=i*0.6; core.add(ring);
+    const bead=sprite(c,.35,1); ring.add(bead); ring.userData={r,bead,speed:.4+i*.17,ph:i*2};
+    rings.push(ring);
+  });
+
+  // destinations
+  const destObjs = DEST.map(d=>{
+    const g=new THREE.Group(); g.position.set(...d.pos); world.add(g);
+    const box=new THREE.Mesh(new THREE.OctahedronGeometry(0.32,0),new THREE.MeshBasicMaterial({color:d.color,wireframe:true}));
+    const fill=new THREE.Mesh(new THREE.OctahedronGeometry(0.22,0),new THREE.MeshPhongMaterial({color:d.color,emissive:d.color,emissiveIntensity:.35,shininess:40,flatShading:true}));
+    g.add(box,fill,sprite(d.color,1.6,.5));
+    const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints(new THREE.QuadraticBezierCurve3(core.position.clone(),new THREE.Vector3((core.position.x+d.pos[0])/2,d.pos[1]*0.4,1.2),new THREE.Vector3(...d.pos)).getPoints(40)),new THREE.LineBasicMaterial({color:d.color,transparent:true,opacity:.18}));
+    world.add(line);
+    const lab=document.createElement("div");lab.className="label";lab.innerHTML=`<i style="background:${d.css}"></i>${d.name}`;$("#labels").appendChild(lab);
+    return {g,box,fill,lab,d,pulse:0};
+  });
+
+  // particles (leads)
+  const leads=[];
+  const tierColor={hot:0xFF6B5A,warm:0xF4D35E,cold:0x9FB0D8};
+  function spawn(){
+    const start=new THREE.Vector3(-6.2-Math.random()*1.5,(Math.random()-.5)*4.8,(Math.random()-.5)*3);
+    const end=core.position.clone();
+    const ctrl=new THREE.Vector3((start.x+end.x)/2,start.y*0.3+(Math.random()-.5)*1.5,1.5+Math.random()*1.5);
+    const curve=new THREE.QuadraticBezierCurve3(start,ctrl,end);
+    const s=sprite(0xE9EEF7,.42,1); world.add(s);
+    const head=new THREE.Mesh(new THREE.SphereGeometry(0.05,10,10),new THREE.MeshBasicMaterial({color:0xFFFFFF})); s.add(head);
+    const trailGeo=new THREE.BufferGeometry().setFromPoints(curve.getPoints(60));
+    const trail=new THREE.Line(trailGeo,new THREE.LineBasicMaterial({color:0x62D6FF,transparent:true,opacity:0}));
+    trailGeo.setDrawRange(0,0); world.add(trail);
+    const r=Math.random(); const tier=r<.28?"hot":r<.7?"warm":"cold";
+    leads.push({s,curve,trail,t:0,speed:.0045+Math.random()*.003,phase:"in",tier,name:FIRST[Math.random()*FIRST.length|0],co:CO[Math.random()*CO.length|0]});
+  }
+  function route(L){
+    const di = L.tier==="hot"?2: L.tier==="warm"?1:0;
+    const dest=destObjs[di];
+    const start=core.position.clone(), end=dest.g.position.clone();
+    L.curve=new THREE.QuadraticBezierCurve3(start,new THREE.Vector3((start.x+end.x)/2,end.y*0.4,1.2),end);
+    L.t=0;L.phase="out";L.dest=dest;L.speed=.012;
+    L.s.material.color.setHex(tierColor[L.tier]);
+    L.trail.geometry.dispose(); L.trail.geometry=new THREE.BufferGeometry().setFromPoints(L.curve.getPoints(60)); L.trail.geometry.setDrawRange(0,0);
+    L.trail.material.color.setHex(tierColor[L.tier]);
+  }
+  function kill(L){world.remove(L.s);world.remove(L.trail);L.trail.geometry.dispose();L.dead=true;}
+
+  let w=0,h=0;
+  function resize(){
+    const r=canvas.getBoundingClientRect(); w=r.width; h=r.height;
+    renderer.setSize(w,h,false); camera.aspect=w/h;
+    // keep scene framed on narrow screens
+    camera.position.z = w<560 ? 13.5 : 10.5;
+    world.position.x = w<560 ? -0.2 : 0;
+    camera.updateProjectionMatrix();
+  }
+  resize(); new ResizeObserver(resize).observe(canvas);
+
+  let mx=0,my=0;
+  $("#scene").addEventListener("pointermove",e=>{const r=e.currentTarget.getBoundingClientRect();mx=((e.clientX-r.left)/r.width-.5);my=((e.clientY-r.top)/r.height-.5);});
+  $("#scene").addEventListener("pointerleave",()=>{mx=0;my=0;});
+
+  let visible=true;
+  new IntersectionObserver(es=>{visible=es[0].isIntersecting;},{threshold:0}).observe(canvas);
+
+  const v=new THREE.Vector3(); let last=performance.now(), spawnT=0, corePulse=0;
+  for(let i=0;i<4;i++){spawn();leads[i].t=Math.random()*.7;}
+  function frame(now){
+    requestAnimationFrame(frame);
+    if(!visible) {last=now;return;}
+    const dt=Math.min(50,now-last)/16.67; last=now;
+    const tt=now*0.001;
+    core.rotation.y += reduce?0:0.004*dt; shell.rotation.x += reduce?0:0.002*dt; innerWire.rotation.y -= reduce?0:0.01*dt;
+    corePulse*=0.92;
+    const sc=1+corePulse*0.18+Math.sin(tt*2)*0.02; inner.scale.setScalar(sc); coreGlow.scale.setScalar(5.2*(1+corePulse*.5));
+    rings.forEach(r=>{const u=r.userData;const a=tt*u.speed+u.ph;u.bead.position.set(Math.cos(a)*u.r,Math.sin(a)*u.r,0);});
+    world.rotation.y += ((mx*0.35)-world.rotation.y)*0.05; world.rotation.x += ((my*0.2)-world.rotation.x)*0.05;
+
+    if(!reduce){ spawnT+=dt; if(spawnT>38){spawnT=0;spawn();} }
+    leads.forEach(L=>{
+      if(L.dead) return;
+      L.t=Math.min(1,L.t+L.speed*dt*(reduce?0:1));
+      L.curve.getPoint(L.t,v); L.s.position.copy(v);
+      const n=Math.floor(L.t*60); L.trail.geometry.setDrawRange(Math.max(0,n-18),Math.min(18,n));
+      L.trail.material.opacity = L.phase==="in"?.6:.85;
+      if(L.t>=1){
+        if(L.phase==="in"){corePulse=1;route(L);}
+        else{
+          L.dest.pulse=1;
+          hudN++; hud.textContent=hudN.toLocaleString("en-US");
+          const tierTxt={hot:'<span style="color:#FF6B5A">hot</span>',warm:'<span style="color:#F4D35E">warm</span>',cold:'<span style="color:#9FB0D8">cold</span>'}[L.tier];
+          const act={hot:"WhatsApp alert sent",warm:"nurture email queued",cold:"added to newsletter"}[L.tier];
+          pushFeed(`${L.name}, ${L.co}: ${tierTxt}, ${act}`);
+          kill(L);
+        }
+      }
+    });
+    for(let i=leads.length-1;i>=0;i--) if(leads[i].dead) leads.splice(i,1);
+    destObjs.forEach(o=>{
+      o.pulse*=0.9; o.box.rotation.y+=0.01*dt; o.box.rotation.x+=0.006*dt; o.fill.rotation.y-=0.014*dt;
+      o.g.scale.setScalar(1+o.pulse*0.45);
+      o.g.getWorldPosition(v); v.project(camera);
+      o.lab.style.left=((v.x*.5+.5)*w)+"px"; o.lab.style.top=((-v.y*.5+.5)*h-28)+"px";
+    });
+    renderer.render(scene,camera);
+  }
+  requestAnimationFrame(frame);
+}
+if(window.THREE) initThree(); else $("#scene").insertAdjacentHTML("beforeend",'<div class="no-gl">3D view could not load. You can still try LeadPilot below.</div>');
+
+/* ---------------- Scoring logic ---------------- */
+const FREE = ["gmail.com","yahoo.com","hotmail.com","outlook.com","icloud.com","aol.com"];
+function scoreLead(L){
+  const msg=(L.msg||"").toLowerCase(), reasons=[];
+  let s=20;
+  const b=+L.budget;
+  if(b>=20000){s+=40;reasons.push(["Budget over $20k","+40"]);}
+  else if(b>=5000){s+=30;reasons.push(["Budget $5k to $20k","+30"]);}
+  else if(b>=1000){s+=15;reasons.push(["Budget $1k to $5k","+15"]);}
+  else reasons.push(["Budget under $1k","+0"]);
+  if(/\b(asap|urgent|urgently|this week|immediately|deadline|right away|by friday|next week)\b/.test(msg)){s+=15;reasons.push(["Urgent timeline","+15"]);}
+  if(/\b(price|pricing|quote|demo|hire|proposal|contract|cost|start|launch|buy)\b/.test(msg)){s+=12;reasons.push(["Buying intent","+12"]);}
+  const dom=(L.email.split("@")[1]||"").toLowerCase();
+  if(dom && !FREE.includes(dom)){s+=8;reasons.push(["Business email","+8"]);} else reasons.push(["Personal email","+0"]);
+  if(L.company.trim()){s+=5;reasons.push(["Company named","+5"]);}
+  if(msg.length>90){s+=5;reasons.push(["Detailed request","+5"]);}
+  if(/\b(student|assignment|homework|university project|internship|just curious|for free|free of cost)\b/.test(msg)){s-=25;reasons.push(["Not a buyer signal","-25"]);}
+  s=Math.max(3,Math.min(98,s));
+  const tier = s>=75?"hot":s>=50?"warm":"cold";
+  return {score:s,tier,reasons,domain:dom};
+}
+function hash(str){let h=2166136261;for(const c of str){h^=c.charCodeAt(0);h=Math.imul(h,16777619);}return Math.abs(h);}
+function enrich(L){
+  const h=hash(L.company+L.email);
+  const sizes=["1 to 10","11 to 50","51 to 200","201 to 500"];
+  const inds={dental:"Healthcare",clinic:"Healthcare",saas:"Software",software:"Software",labs:"Software",realty:"Real estate",estate:"Real estate",fitness:"Fitness",studio:"Creative agency",shop:"Retail",store:"Retail"};
+  let ind="Services";const lc=(L.company+" "+L.msg).toLowerCase();
+  for(const k in inds) if(lc.includes(k)){ind=inds[k];break;}
+  return {size:sizes[h%4],industry:ind,country:["Pakistan","United Kingdom","United States","UAE","Canada"][h%5]};
+}
+function greetName(n){
+  const parts=n.trim().split(/\s+/).filter(Boolean);
+  if(!parts.length) return "there";
+  if(/^dr\.?$/i.test(parts[0])) return parts.length>1 ? "Dr. "+parts[parts.length-1] : "Doctor";
+  return parts[0];
+}
+function slugName(n){const p=n.trim().split(/\s+/).filter(x=>!/^dr\.?$/i.test(x));return ((p[0]||"you").toLowerCase().replace(/[^a-z0-9]/g,""))||"you";}
+function writeEmail(L,R,E){
+  const fn=greetName(L.name), co=L.company.trim()||"your business";
+  if(R.tier==="hot") return {
+    subj:`Re: your project for ${co}`,
+    body:`Hi ${fn},\n\nThanks for reaching out. I read your message and this is exactly the kind of project we do well for ${E.industry.toLowerCase()} teams, so I'd love to move quickly.\n\nCould we talk for 20 minutes this week? I'm free Tuesday at 11:00 or Thursday at 15:30 (your time). Just reply with the one that suits you and I'll send the invite.\n\nI'll come with a rough plan and timeline for ${co}.\n\nBest,\nHafiz`
+  };
+  if(R.tier==="warm") return {
+    subj:`Ideas for ${co}`,
+    body:`Hi ${fn},\n\nThank you for your message. Happy to help ${co} with this.\n\nTo give you an accurate quote, could you tell me:\n1. When would you like to launch?\n2. Is there a site or app you like the look of?\n\nOnce I have those, I'll send a clear quote and a couple of similar ${E.industry.toLowerCase()} projects so you can see how we work.\n\nTalk soon,\nHafiz`
+  };
+  return {
+    subj:`Thanks for getting in touch`,
+    body:`Hi ${fn},\n\nThanks for your message! I've added you to our monthly newsletter with free guides on building websites and apps, which should help with what you're working on.\n\nIf your plans grow into a paid project later, just reply to this email and I'll get back to you personally.\n\nAll the best,\nHafiz`
+  };
+}
+
+/* ---------------- Demo UI ---------------- */
+const SAMPLES=[
+  {name:"Dr. Ayesha Malik",company:"Smile Dental Clinic",email:"ayesha@smiledental.pk",budget:"12000",msg:"We need a booking website with WhatsApp reminders for our 3 clinics. Our current site is losing patients, so this is urgent. Can you send a quote this week?"},
+  {name:"Daniel Brooks",company:"Kinetic Labs",email:"dan@kineticlabs.io",budget:"30000",msg:"Founder here. We're launching a B2B SaaS in Q1 and need a full-stack dev to build the dashboard, billing and onboarding. Looking for a proposal and a call to discuss pricing."},
+  {name:"Hamza Ali",company:"",email:"hamza.ali2004@gmail.com",budget:"500",msg:"Hi, I'm a student working on my university project. Can you explain how to build a login page? Just curious if you can help for free."},
+  {name:"Sana Qureshi",company:"Noor Boutique",email:"sana@noorboutique.com",budget:"3000",msg:"We sell clothes on Instagram and want our own online store. Not sure about the budget yet. What would the cost be for something simple?"}
+];
+const f={name:$("#f-name"),company:$("#f-company"),email:$("#f-email"),budget:$("#f-budget"),msg:$("#f-msg")};
+function fill(i){const s=SAMPLES[i];for(const k in f) f[k].value=s[k];$$(".samples .chip").forEach(c=>c.setAttribute("aria-pressed",+c.dataset.sample===i?"true":"false"));}
+fill(0);
+$$(".samples .chip").forEach(c=>c.addEventListener("click",()=>fill(+c.dataset.sample)));
+
+/* CRM seed */
+const COLORS=["#FF9F43","#62D6FF","#3DDC97","#F4D35E","#C9A7FF","#FF8FA3"];
+const tierLabel={hot:"Hot",warm:"Warm",cold:"Cold"};
+const tierBar={hot:"#FF6B5A",warm:"#F4D35E",cold:"#7D8DB8"};
+const actionFor={hot:"WhatsApp alert + call booked",warm:"Nurture email 1 of 3 sent",cold:"Added to newsletter"};
+let crm=[
+  {name:"Sofia Reyes",company:"Atlas Realty",src:"Website form",score:88,tier:"hot",time:"09:12"},
+  {name:"Omar Siddiqui",company:"Urban Nest",src:"Facebook ad",score:71,tier:"warm",time:"08:57"},
+  {name:"Emma Clarke",company:"Lumen Studio",src:"Email",score:64,tier:"warm",time:"08:41"},
+  {name:"Bilal Ahmed",company:"Peak Fitness",src:"Website form",score:92,tier:"hot",time:"08:20"},
+  {name:"Liam Turner",company:"",src:"Facebook ad",score:31,tier:"cold",time:"07:58"},
+  {name:"Zara Khan",company:"GreenLeaf Organics",src:"Website form",score:77,tier:"hot",time:"07:33"},
+  {name:"Noah Fischer",company:"Vertex Co",src:"Email",score:55,tier:"warm",time:"07:05"},
+  {name:"Hira Javed",company:"",src:"Website form",score:22,tier:"cold",time:"06:48"}
+];
+let filter="all";
+function initials(n){return n.replace(/^Dr\.?\s*/,"").split(/\s+/).map(x=>x[0]).slice(0,2).join("").toUpperCase();}
+function renderCRM(freshIdx){
+  const rows=crm.map((r,i)=>({r,i})).filter(x=>filter==="all"||x.r.tier===filter);
+  $("#crmBody").innerHTML = rows.length? rows.map(({r,i})=>`
+    <tr class="${i===freshIdx?"fresh":""}">
+      <td><div class="who"><span class="av" style="background:${COLORS[hash(r.name)%COLORS.length]}">${initials(r.name)}</span><div>${esc(r.name)}<small>${esc(r.company||"No company given")}</small></div></div></td>
+      <td>${r.src}</td>
+      <td><div class="bar"><span><i style="width:${r.score}%;background:${tierBar[r.tier]}"></i></span><b class="num">${r.score}</b></div></td>
+      <td><span class="tier ${r.tier}"><i></i>${tierLabel[r.tier]}</span></td>
+      <td>${actionFor[r.tier]}</td>
+      <td class="num">${r.time}</td>
+    </tr>`).join("") : `<tr><td colspan="6" style="color:var(--muted);padding:22px 16px">No ${filter} leads yet today. Run a lead above to add one.</td></tr>`;
+}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+renderCRM();
+$$(".filters .chip").forEach(c=>c.addEventListener("click",()=>{filter=c.dataset.f;$$(".filters .chip").forEach(x=>x.setAttribute("aria-pressed",x===c?"true":"false"));renderCRM();}));
+
+/* Run */
+const sleep=ms=>new Promise(r=>setTimeout(r,reduce?Math.min(ms,80):ms));
+const logEl=$("#log");
+function now(){const d=new Date();return d.toTimeString().slice(0,8);}
+function log(html){if(logEl.querySelector(".empty-run")) logEl.innerHTML="";const p=document.createElement("div");p.innerHTML=`<span class="t">${now()}</span>${html}`;logEl.appendChild(p);logEl.scrollTop=logEl.scrollHeight;}
+function step(i,state,note){const li=$(`#steps li[data-s="${i}"]`);li.className=state;if(note!==undefined) li.querySelector("small").textContent=note;}
+function setGauge(score,tier){
+  const arc=$("#gArc"), C=314.16; arc.style.strokeDashoffset=C*(1-score/100);
+  arc.style.stroke = tier? tierBar[tier] : "#62D6FF";
+  const el=$("#gVal"); const from=+el.textContent||0; const t0=performance.now(); const dur=reduce?1:1000;
+  (function tick(t){const k=Math.min(1,(t-t0)/dur);const e=1-Math.pow(1-k,3);el.textContent=Math.round(from+(score-from)*e);if(k<1)requestAnimationFrame(tick);})(t0);
+}
+let running=false, emailText="";
+async function typeEmail(text){
+  const body=$("#mBody"); body.textContent="";
+  const caret=document.createElement("span");caret.className="caret";
+  if(reduce){body.textContent=text;return;}
+  const node=document.createTextNode("");body.append(node,caret);
+  for(let i=0;i<text.length;i+=3){node.data=text.slice(0,i+3);await new Promise(r=>setTimeout(r,12));}
+  caret.remove();
+}
+function toast(t,s){$("#toastT").textContent=t;$("#toastS").textContent=s;const el=$("#toast");el.classList.add("show");clearTimeout(toast._t);toast._t=setTimeout(()=>el.classList.remove("show"),4200);}
+
+$("#leadForm").addEventListener("submit",async e=>{
+  e.preventDefault(); if(running) return;
+  const L={name:f.name.value.trim(),company:f.company.value.trim(),email:f.email.value.trim(),budget:f.budget.value,msg:f.msg.value.trim()};
+  const err=$("#err");
+  if(!L.name){err.textContent="Add the lead's name so the agent can personalise the reply.";f.name.focus();return;}
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(L.email)){err.textContent="Enter a valid email address, for example name@company.com.";f.email.focus();return;}
+  if(L.msg.length<10){err.textContent="Write a message of at least a few words so the agent has something to read.";f.msg.focus();return;}
+  err.textContent="";
+  running=true; const btn=$("#runBtn"); btn.disabled=true; btn.textContent="Agent is working…";
+  logEl.innerHTML=""; $("#decision").innerHTML=""; $("#copyBtn").disabled=true;
+  $$("#steps li").forEach((li,i)=>{li.className="";li.querySelector("small").textContent="";});
+  setGauge(0); $("#mSubj").textContent="Writing reply…"; $("#mTo").textContent="To: "+L.email; $("#mBody").textContent="";
+
+  const t0=performance.now();
+  step(0,"active"); log(`<span class="k">webhook</span> new inquiry from ${esc(L.name)} &lt;${esc(L.email)}&gt;`);
+  await sleep(650); step(0,"done","0.2 s");
+
+  step(1,"active"); const E=enrich(L);
+  log(`<span class="k">enrich</span> looking up ${esc(L.company||L.email.split("@")[1]||"sender")}`);
+  await sleep(900);
+  log(`industry <span class="a">${E.industry}</span>, size <span class="a">${E.size} staff</span>, ${E.country}`);
+  step(1,"done","0.9 s");
+
+  step(2,"active"); const R=scoreLead(L);
+  log(`<span class="k">llm</span> reading message for intent, urgency and fit`);
+  await sleep(700);
+  for(const [why,pts] of R.reasons){log(`${why} <span class="${pts.startsWith("-")?"a":"g"}">${pts}</span>`);await sleep(170);}
+  setGauge(R.score,R.tier);
+  await sleep(500); step(2,"done",R.score+" / 100");
+
+  step(3,"active");
+  const route={hot:"Hot lead: alert owner on WhatsApp and offer a call",warm:"Warm lead: ask 2 questions and start nurture emails",cold:"Cold lead: friendly reply and newsletter"}[R.tier];
+  log(`<span class="k">route</span> ${route}`);
+  await sleep(600);
+  $("#decision").innerHTML=`<span class="tier ${R.tier}"><i></i>${tierLabel[R.tier]} lead</span><span class="action">${actionFor[R.tier]}</span>`;
+  step(3,"done",tierLabel[R.tier]);
+
+  step(4,"active");
+  const M=writeEmail(L,R,E); emailText=`Subject: ${M.subj}\n\n${M.body}`;
+  $("#mSubj").textContent=M.subj;
+  log(`<span class="k">llm</span> drafting reply in your tone of voice`);
+  await typeEmail(M.body);
+  log(`<span class="k">crm</span> contact saved with score ${R.score} and tier ${R.tier}`);
+  const secs=((performance.now()-t0)/1000).toFixed(1);
+  step(4,"done",secs+" s");
+  log(`<span class="g">done</span> lead handled in ${secs} s`);
+  $("#copyBtn").disabled=false;
+
+  const d=new Date();
+  crm.unshift({name:L.name,company:L.company,src:"Website form",score:R.score,tier:R.tier,time:d.toTimeString().slice(0,5)});
+  if(filter!=="all"&&filter!==R.tier){filter="all";$$(".filters .chip").forEach(x=>x.setAttribute("aria-pressed",x.dataset.f==="all"?"true":"false"));}
+  renderCRM(0);
+  if(R.tier==="hot") toast("WhatsApp alert sent to you",`Hot lead: ${L.name}${L.company?", "+L.company:""}. Score ${R.score}. Call slot offered.`);
+  else if(R.tier==="warm") toast("Nurture sequence started",`${L.name} gets email 1 of 3 now, the next in 3 days.`);
+  else toast("Added to newsletter",`${L.name} will get the monthly guide.`);
+  running=false; btn.disabled=false; btn.textContent="Run the agent";
+});
+
+$("#copyBtn").addEventListener("click",async()=>{
+  const b=$("#copyBtn");
+  try{await navigator.clipboard.writeText(emailText);b.textContent="Copied";}
+  catch(e){b.textContent="Copy blocked here";}
+  setTimeout(()=>b.textContent="Copy email",1800);
+});
+
+/* ---------------- Savings calculator ---------------- */
+(function(){
+  const L=$("#c-leads"),M=$("#c-mins"),C=$("#c-rate");
+  const fmt=n=>n.toLocaleString("en-US");
+  const hrs=n=>n<10?(Math.round(n*10)/10).toLocaleString("en-US"):fmt(Math.round(n));
+  function paint(el){const p=(el.value-el.min)/(el.max-el.min)*100;el.style.setProperty("--p",p+"%");}
+  function calc(){
+    const leads=+L.value, mins=+M.value, rate=+C.value;
+    const now=leads*mins/60, saved=now*0.8, after=now-saved;
+    $("#o-leads").textContent=fmt(leads);
+    $("#o-mins").textContent=mins+" min";
+    $("#o-rate").textContent="$"+rate;
+    $("#r-hours").textContent=hrs(saved);
+    $("#v-now").textContent=hrs(now)+" h";
+    $("#v-lp").textContent=hrs(after)+" h";
+    $("#bar-now").style.width="100%";
+    $("#bar-lp").style.width=Math.max(2,Math.round(after/now*100))+"%";
+    $("#r-month").textContent="$"+fmt(Math.round(saved*rate*52/12));
+    $("#r-days").textContent=hrs(saved*48/8);
+    [L,M,C].forEach(paint);
+  }
+  [L,M,C].forEach(el=>el.addEventListener("input",calc));
+  calc();
+})();
+})();
+</script>
+</body>
+</html>
